@@ -2,13 +2,14 @@ import AddDocumentBtn from '@/components/AddDocumentBtn';
 import { DeleteModal } from '@/components/DeleteModal';
 import Header from '@/components/Header'
 import Notifications from '@/components/Notifications';
-import { Button } from '@/components/ui/button'
 import { getDocuments } from '@/lib/actions/room.actions';
 import { dateConverter } from '@/lib/utils';
 import { SignedIn, UserButton } from '@clerk/nextjs'
 import { currentUser } from '@clerk/nextjs/server';
 import Image from 'next/image';
 import Link from 'next/link';
+import {ModeToggle} from "@/components/DarkMode";
+
 import { redirect } from 'next/navigation';
 
 const Home = async () => {
@@ -25,6 +26,7 @@ const Home = async () => {
           <SignedIn>
             <UserButton />
           </SignedIn>
+          <ModeToggle/>
         </div>
       </Header>
 
