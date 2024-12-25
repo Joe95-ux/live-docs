@@ -1,37 +1,58 @@
 'use client';
 
 import Loader from '@/components/Loader';
-import { getClerkUsers, getDocumentUsers } from '@/lib/actions/user.actions';
 import { useUser } from '@clerk/nextjs';
 import { ClientSideSuspense, LiveblocksProvider } from '@liveblocks/react/suspense';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 
-const Provider = ({ children }: { children: ReactNode}) => {
-  const { user: clerkUser } = useUser();
+const Provider = ({ children }: { children: ReactNode }) => {
+  const { user: clerkUser, isLoaded } = useUser();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && clerkUser?.emailAddresses?.[0]?.emailAddress) {
+      setUserEmail(clerkUser.emailAddresses[0].emailAddress);
+    }
+  }, [isLoaded, clerkUser]);
 
   return (
     <LiveblocksProvider 
       authEndpoint="/api/liveblocks-auth"
       resolveUsers={async ({ userIds }) => {
-        const users = await getClerkUsers({ userIds});
-
-        return users;
+        try {
+          const response = await fetch('/api/get-clerk-users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userIds }),
+          });
+          if (!response.ok) throw new Error('Failed to fetch users');
+          return await response.json();
+        } catch (error) {
+          console.error('Error fetching users:', error);
+          return [];
+        }
       }}
       resolveMentionSuggestions={async ({ text, roomId }) => {
-        const roomUsers = await getDocumentUsers({
-          roomId,
-          currentUser: clerkUser?.emailAddresses[0].emailAddress!,
-          text,
-        })
-
-        return roomUsers;
+        try {
+          if (!userEmail) return [];
+          const response = await fetch('/api/get-document-users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomId, currentUser: userEmail, text }),
+          });
+          if (!response.ok) throw new Error('Failed to fetch document users');
+          return await response.json();
+        } catch (error) {
+          console.error('Error fetching document users:', error);
+          return [];
+        }
       }}
     >
       <ClientSideSuspense fallback={<Loader />}>
         {children}
       </ClientSideSuspense>
     </LiveblocksProvider>
-  )
-}
+  );
+};
 
-export default Provider
+export default Provider;
